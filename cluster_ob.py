@@ -143,38 +143,6 @@ def linear_fit(tt,xx, yy, eyy, method = 'ls'):
     fit = pow_law_func(tt, par[0], par[1])
     return par, per, fit
 
-def gapper(v):
-    """ Returns the gapper velocity dispersion of a cluster (Sigma_G)
-
-    v is an array of galaxy velocity values.
-    """
-    v=np.array(v)
-    vs=v[np.argsort(v)]
-    n = len(vs)
-    w = np.arange(1, n) * np.arange(n-1, 0, -1)
-    g = np.diff(vs)
-    sigG = (np.sqrt(np.pi))/(n*(n-1)) * np.dot(w, g)
-    return sigG
-
-def errors_estim(v):
-    ss = []
-    sg = []
-    sb = []
-    for ib in range(100):
-        np.random.seed(1986*ib)
-        vv = np.random.choice(v, len(v), replace=True)
-        ss = np.append(ss, np.std(vv, ddof=1))
-        sg = np.append(sg, gapper(vv))
-        sb = np.append(sb, biweight.biweight_scale(vv))#, c=9.0, M=biweight.biweight_location(vv, M=np.mean(vv))))
-        #if len(v) > 1:
-        #    sb = np.append(sb, aux_sb*np.sqrt(len(vv)/(len(vv)-1)))
-        #else: sb = np.append(sb, aux_sb)
-        #sb = np.append(sb, biweight.biweight_scale(vv, c=9.0, M=biweight.biweight_location(vv, M=np.mean(vv))))#*np.sqrt(len(vv)/(len(vv)-1)))
-
-    e_ss = np.std(ss)
-    e_sg = np.std(sg)
-    e_sb = np.std(sb)
-    return e_ss, e_sg, e_sb
 
 class Cluster:
     def __init__(self, path, name, tracer='sub'):
@@ -212,9 +180,14 @@ class Cluster:
         self.M200_mem = self.data['mass'][self.is_gal]
 
 
+        """
         self.members_coord_x = self.cluster_center[0]-self.data['x'][self.is_gal]*1.e-3
         self.members_coord_y = self.cluster_center[1]-self.data['y'][self.is_gal]*1.e-3
         self.members_coord_z = self.cluster_center[2]-self.data['z'][self.is_gal]*1.e-3
+        """
+        self.members_coord_x = self.data['x'][self.is_gal]*1.e-3
+        self.members_coord_y = self.data['y'][self.is_gal]*1.e-3
+        self.members_coord_z = self.data['z'][self.is_gal]*1.e-3
         self.members_coord = np.dstack((self.members_coord_x,self.members_coord_y,self.members_coord_z)).reshape(self.tot_members,3)
 
 
@@ -383,3 +356,36 @@ class Cluster:
         #else: self.sigma_b = aux_bwt
 
         return self.sigma_s, self.sigma_g, self.sigma_b
+
+def gapper(v):
+    """ Returns the gapper velocity dispersion of a cluster (Sigma_G)
+
+    v is an array of galaxy velocity values.
+    """
+    v=np.array(v)
+    vs=v[np.argsort(v)]
+    n = len(vs)
+    w = np.arange(1, n) * np.arange(n-1, 0, -1)
+    g = np.diff(vs)
+    sigG = (np.sqrt(np.pi))/(n*(n-1)) * np.dot(w, g)
+    return sigG
+
+def errors_estim(v):
+    ss = []
+    sg = []
+    sb = []
+    for ib in range(100):
+        np.random.seed(1986*ib)
+        vv = np.random.choice(v, len(v), replace=True)
+        ss = np.append(ss, np.std(vv, ddof=1))
+        sg = np.append(sg, gapper(vv))
+        sb = np.append(sb, biweight.biweight_scale(vv))#, c=9.0, M=biweight.biweight_location(vv, M=np.mean(vv))))
+        #if len(v) > 1:
+        #    sb = np.append(sb, aux_sb*np.sqrt(len(vv)/(len(vv)-1)))
+        #else: sb = np.append(sb, aux_sb)
+        #sb = np.append(sb, biweight.biweight_scale(vv, c=9.0, M=biweight.biweight_location(vv, M=np.mean(vv))))#*np.sqrt(len(vv)/(len(vv)-1)))
+
+    e_ss = np.std(ss)
+    e_sg = np.std(sg)
+    e_sb = np.std(sb)
+    return e_ss, e_sg, e_sb
