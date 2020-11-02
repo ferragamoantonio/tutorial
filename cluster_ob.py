@@ -217,9 +217,16 @@ class Cluster:
         self.members_coord = np.dstack((self.members_coord_x,self.members_coord_y,self.members_coord_z)).reshape(self.tot_members,3)
 
 
+        #self.members_vx = self.data['vx'][self.is_gal] - self.data['vx'][0]
+        #self.members_vy = self.data['vy'][self.is_gal] - self.data['vy'][0]
+        #self.members_vz = self.data['vz'][self.is_gal] - self.data['vz'][0]
+        #self.members_vx = self.data['vx'][self.is_gal] - np.mean(self.data['vx'][self.is_gal])
+        #self.members_vy = self.data['vy'][self.is_gal] - np.mean(self.data['vx'][self.is_gal])
+        #self.members_vz = self.data['vz'][self.is_gal] - np.mean(self.data['vx'][self.is_gal])
         self.members_vx = self.data['vx'][self.is_gal]
         self.members_vy = self.data['vy'][self.is_gal]
         self.members_vz = self.data['vz'][self.is_gal]
+
         #self.members_velocities = np.dstack((self.members_vx,self.members_vy,self.members_vz)).reshape(self.tot_members,3)#.reshape(self.tot_members,3)
         self.members_velocities = np.dstack((self.members_vx,self.members_vy,self.members_vz)).reshape(self.tot_members,3)
         #self.members_velocities = np.vstack((self.members_vx, self.members_vy, self.members_vz))

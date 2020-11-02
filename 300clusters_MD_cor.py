@@ -45,61 +45,84 @@ with open(file_path+'clusters_list_central.txt', 'r') as clu_file:
 saveplot = 0
 #tracers = 'sub'
 tracers = 'gal'
+#non_comulative = False
+non_comulative = True
 
 n_clusters = 325
 
 """
 ### PRENDERE INFO DEI CLUSTER CENTRALI ###
 
+fig, ax = plt.subplots()
+
 fcl_center = []
 fcl_R200 = []
 fcl_M200 = []
+kurt_3d = []
+skew_3d = []
 for ic, shalo in enumerate(clusters_list_central):
-    si_fcl = str(ic+1)
+    #if ic == 2 :
     file_name = shalo
     if '_1_z' in file_name:
         fcl = Cluster(file_path, file_name, tracer=tracers)
+        hh, bi = hist_normalised(np.array(fcl.members_velocities200[:,0]), ax=ax, color='C'+str(0))
+        hh, bi = hist_normalised(np.array(fcl.members_velocities200[:,1]), ax=ax, color='C'+str(1))
+        hh, bi = hist_normalised(np.array(fcl.members_velocities200[:,2]), ax=ax, color='C'+str(2))
+
+        vel_sph = fcl.cyl_sphe_coord(fcl.members_velocities200[:,0],fcl.members_velocities200[:,1],fcl.members_velocities200[:,2])[1]
+        kurt_3d = np.append(kurt_3d,kurtosis(vel_sph))
+        skew_3d = np.append(skew_3d,skew(vel_sph))
+            #hh, bi = hist_normalised(np.array(fcl.members_velocities[:,0]), ax=ax, color='C'+str(2))
         hz = cosmo.H(z_red).value/100.
         fcl_center.append(fcl.cluster_center)
         fcl_R200 = np.append(fcl_R200, fcl.R200)
         fcl_M200 = np.append(fcl_M200, fcl.M200/cosmo.h*hz)
 fcl_center = np.array(fcl_center)
 
+
 First_Clusters = Table()
 First_Clusters['coordinates'] = fcl_center
 First_Clusters['R200'] = fcl_R200
 First_Clusters['M200'] = fcl_M200
-First_Clusters.write(file_path+'central_clusters_coord_rad_mass.fits')
+First_Clusters.write(file_path+'central_clusters_coord_rad_mass.fits', overwrite=True)
 """
 
 ### LEGGERE INFO DEI CLUSTER CENTRALI ###
 
-fcl = Table.read(file_path+'central_clusters_coord_rad_mass.fits')
+fcl = Table.read(file_path+'output/central_clusters_coord_rad_mass.fits')
 
-mass_lim_names = ['13_6', '13_8', '14_0', '14_2', '14_4', '14_6', '14_8', '15_0', '15_2']
-mass_lim_names2 = ['13.6', '13.8', '14.0', '14.2', '14.4', '14.6', '14.8', '15.0', '15.2']
-mass_lims = [10**6, 10**8, 10**8.5, 10**9, 10**9.5, 10**9.8, 10**10]#, 10**10.25, 10**10.5]
-stell_mass_strs = ['6', '8', '8.5', '9', '9.5', '9.8', '10']#, '10.25', '10.5']
+
+star_mass_lims = [10**6, 10**8, 10**8.5, 10**9, 10**9.5, 10**9.8, 10**10, 10**10.25, 10**10.5]
+star_mass_strs = ['6', '8', '8.5', '9', '9.5', '9.8', '10', '10.25', '10.5']
+
 h_mass_lims = np.arange(13.6, 15.4, 0.2)
+halo_mass_lim_names = ['13_6', '13_8', '14_0', '14_2', '14_4', '14_6', '14_8', '15_0', '15_2']
+halo_mass_lim_names2 = ['13.6', '13.8', '14.0', '14.2', '14.4', '14.6', '14.8', '15.0', '15.2']
 
-for imass_lim in range(len(mass_lims)):
-    if imass_lim >= 1: break
-    imass_lim = 3
+for i_s_mass_lim in range(len(star_mass_strs)):
+#for i_s_mass_lim in [8]:
+    #if i_s_mass_lim >= 1: break
+    #i_s_mass_lim = 8
+    star_mass_lim = star_mass_lims[i_s_mass_lim]
+    stell_mass_str = star_mass_strs[i_s_mass_lim]
+
     for i_h_mass_lim in range(len(h_mass_lims)):
-        #if i_h_mass_lim > 8: break
-        if i_h_mass_lim >= 1: break
-        mass_lim_name = mass_lim_names[i_h_mass_lim]
-        mass_lim_name2 = mass_lim_names2[i_h_mass_lim]
-        mass_lim = mass_lims[imass_lim]
-        stell_mass_str = stell_mass_strs[imass_lim]
+    #for i_h_mass_lim in [0]:
+        if i_h_mass_lim > 8: break
+        #if i_h_mass_lim >= 1: break
+        mass_lim_name = halo_mass_lim_names[i_h_mass_lim]
+        mass_lim_name2 = halo_mass_lim_names2[i_h_mass_lim]
+
         ngal_lim = 3
 
         print('')
         print('stell_mass = 10**'+stell_mass_str)
         print('halo_mass =  10**'+mass_lim_name2)
 
+        cl_names = []
         masses = []
         M200 = []
+        R200 = []
         M_stars = []
         n_stars = []
 
@@ -113,6 +136,7 @@ for imass_lim in range(len(mass_lims)):
         e_sigma200_b = []
         e_sigma200_stat_b = []
         nmem = []
+        nmem_mass = []
 
         #STARTS LOOP OVER SIMULATED CLUSTERS
         kurt = []
@@ -130,16 +154,39 @@ for imass_lim in range(len(mass_lims)):
         df_fcl = []
         df_fcl_r200 = []
 
+        BCG_vel = []
+        mean_vel = []
+        mean_vel_mass = []
+
         iicc = 0
         cluster_names = []
         for ic, shalo in enumerate(clusters_list):
             file_name = shalo
             #if '_1_z' not in file_name: continue
             p1 = Cluster(file_path, file_name, tracer=tracers)
-            hz = cosmo.H(z_red).value/100.
+            setattr(p1, 'redshift', redshifts[ired])
+            hz = cosmo.H(p1.redshift).value/100.
+
+            nmem_cl = p1.tot_members200
+            nmem_cl_mass = len(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),0])
+            #nmem_cl_mass = len(p1.M_stars_mem[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim)])
+
+            if nmem_cl_mass < ngal_lim: continue
+
+            ## NON COMULATIVE
+            if non_comulative:
+                non_com_str = '_non_com'
+                if np.log10(p1.M200/cosmo.h*hz) < h_mass_lims[i_h_mass_lim] or np.log10(p1.M200/cosmo.h*hz) >= h_mass_lims[i_h_mass_lim]+0.2: continue
+            else: non_com_str = ''
+
+            M_stars = np.append(M_stars, p1.M_stars_mem)
+            n_stars = np.append(n_stars, p1.n_stars_mem)
+            cluster_names.append(shalo)
+
 
             for i_fcl in (range(len(fcl['coordinates']))):
-                si_fcl = str(i_fcl+1)
+                if i_fcl < 306: si_fcl = str(i_fcl+1)
+                else: si_fcl = str(i_fcl+2)
                 if 'NewMDCLUSTER_'+si_fcl+'_' in p1.name:
                     aux_coord_flc = p1.cluster_center-fcl['coordinates'][i_fcl]
                     coord_fcl.append(aux_coord_flc)
@@ -147,29 +194,45 @@ for imass_lim in range(len(mass_lims)):
                     df_fcl.append(aux_df)
                     df_fcl_r200.append(aux_df/p1.R200)
 
-            nmem_cl = p1.tot_members200
-            nmem_cl_mass = len(p1.M_stars_mem[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim)])
+            BCG_vel.append(p1.members_velocities[0,:])
+            #vel_cl = p1.members_velocities200[1:,:]
+            #vel_cl_mass = p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),:][1:]
+            mean_vel.append(np.mean(p1.members_velocities200[1:,:], axis=0))
+            mean_vel_mass.append(np.mean(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),:][1:], axis=0))
 
-            ## NON COMULATIVE
-            if np.log10(p1.M200/cosmo.h*hz) < h_mass_lims[i_h_mass_lim] or np.log10(p1.M200/cosmo.h*hz) >= h_mass_lims[i_h_mass_lim]+0.2: continue
-            if nmem_cl_mass < ngal_lim: continue
-            M_stars = np.append(M_stars, p1.M_stars_mem)
-            n_stars = np.append(n_stars, p1.n_stars_mem)
-            cluster_names.append(shalo)
-
-            nmem = np.append(nmem, nmem_cl)
+            cl_names.append(p1.name)
+            nmem = np.append(nmem,nmem_cl)
+            nmem_mass = np.append(nmem_mass,nmem_cl_mass)
             M200 = np.append(M200, p1.M200/1.e15/cosmo.h*hz)
-            masses.append(p1.M200)
+            masses.append(p1.M200/cosmo.h*hz)
+            R200 = np.append(R200, p1.R200)
+
+            """
+            #RIMUOVERE UN TAB QUANDO SI VUOLE USARE
+            Clusters_infos = Table()
+            Clusters_infos['cl_name'] = names
+            Clusters_infos['M200'] = M200
+            Clusters_infos['R200'] = R200
+            Clusters_infos['df_fcl'] = np.array(df_fcl)
+            Clusters_infos['df_fcl_norm_r200'] = np.array(df_fcl_r200)
+            Clusters_infos['BCG_vel'] = np.array(BCG_vel)
+            Clusters_infos['mean_vel'] = np.array(mean_vel)
+            Clusters_infos['mean_vel_mass'] = np.array(mean_vel_mass)
+            Clusters_infos['nmem'] = np.array(nmem)
+            Clusters_infos['nmem_mass'] = np.array(nmem_mass)
+            Clusters_infos.write(file_path+'output/%s/clusters_info_vel_dist_%s_%s.fits'%(tracers,stell_mass_str,mass_lim_name2), overwrite=True)
+            """
+
+            aux_sigma = p1.sigmas200(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),:])
 
             """
             np.random.seed(1986)
-            vvx = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),0], 10, replace=False)
-            vvy = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),1], 10, replace=False)
-            vvz = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),2], 10, replace=False)
+            vvx = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),0], 10, replace=False)
+            vvy = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),1], 10, replace=False)
+            vvz = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),2], 10, replace=False)
             vv = np.dstack((vvx,vvy,vvz)).reshape(len(vvx),3)
             aux_sigma = p1.sigmas200(vv)
             """
-            aux_sigma = p1.sigmas200(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),:])
 
             sigma200_s1 = np.append(sigma200_s1, aux_sigma[3][0])
             sigma200_g1 = np.append(sigma200_g1, aux_sigma[4][0])
@@ -184,7 +247,7 @@ for imass_lim in range(len(mass_lims)):
             e_sigma200_g = np.append(e_sigma200_g, p1.e_sigma_los_g)
             e_sigma200_b = np.append(e_sigma200_b, p1.e_sigma_los_b)
 
-            vel_sph = p1.cyl_sphe_coord(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),0],p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),1],p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),2])[1]
+            vel_sph = p1.cyl_sphe_coord(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),0],p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),1],p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),2])[1]
             kurt_3d = np.append(kurt_3d,kurtosis(vel_sph))
             skew_3d = np.append(skew_3d,skew(vel_sph))
             np.random.seed(12345678)  #fix random seed to get the same result
@@ -206,17 +269,17 @@ for imass_lim in range(len(mass_lims)):
             pv_proj_g = []
             pv_proj_b = []
             for iproj in range(3):
-                kur_proj.append(kurtosis(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),iproj]))
-                skewn_proj.append(skew(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),iproj]))
+                kur_proj.append(kurtosis(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),iproj]))
+                skewn_proj.append(skew(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),iproj]))
 
                 np.random.seed(12345678)  #fix random seed to get the same result
                 n1 = 1000  # size of first sample
                 rvs_s = stats.norm.rvs(size=n1, loc=0., scale=1)
                 rvs_g = stats.norm.rvs(size=n1, loc=0., scale=1)
                 rvs_b = stats.norm.rvs(size=n1, loc=0., scale=1)
-                dv_s, pv_s = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),iproj]/aux_sigma[3][0], rvs_s)
-                dv_g, pv_g = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),iproj]/aux_sigma[4][0], rvs_g)
-                dv_b, pv_b = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= mass_lim),iproj]/aux_sigma[5][0], rvs_b)
+                dv_s, pv_s = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),iproj]/aux_sigma[3][0], rvs_s)
+                dv_g, pv_g = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),iproj]/aux_sigma[4][0], rvs_g)
+                dv_b, pv_b = stats.ks_2samp(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),iproj]/aux_sigma[5][0], rvs_b)
 
                 pv_proj_s = np.append(pv_proj_s, pv_s)
                 pv_proj_g = np.append(pv_proj_g, pv_g)
@@ -254,7 +317,7 @@ for imass_lim in range(len(mass_lims)):
         per_b = []
         fit_b = []
 
-        sigma200_s, sigma200_g, sigma200_b = corr_sigma(sigma200_s1, sigma200_g1, sigma200_b1, nmem)
+        sigma200_s, sigma200_g, sigma200_b = corr_sigma(sigma200_s1, sigma200_g1, sigma200_b1, nmem_mass)
 
         err_sigma_s = e_sigma200_stat_s[notnan]
         err_sigma_g = e_sigma200_stat_g[notnan]
@@ -347,12 +410,12 @@ for imass_lim in range(len(mass_lims)):
         print('bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+' = [',par_b[0],',', per_b[0],'] ,', sigmaint_b)
         print()
         if ngal_lim == 3:
-            if i_h_mass_lim == 0: print('plot_par_mass_dep(ax1, colorVal['+str(imass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+', lab=r"$M_* = 10^{'+stell_mass_str+'}$")')
-            else: print('plot_par_mass_dep(ax1, colorVal['+str(imass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+')')
-            if imass_lim == 0: print('plot_par_mass_dep(ax2, colorVal2['+str(i_h_mass_lim)+'], stell_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+', lab=r"$M_{halo} = 10^{'+str(mass_lim_names2[i_h_mass_lim])+'}$")')
+            if i_h_mass_lim == 0: print('plot_par_mass_dep(ax1, colorVal['+str(i_s_mass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+', lab=r"$M_* = 10^{'+stell_mass_str+'}$")')
+            else: print('plot_par_mass_dep(ax1, colorVal['+str(i_s_mass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+')')
+            if i_s_mass_lim == 0: print('plot_par_mass_dep(ax2, colorVal2['+str(i_h_mass_lim)+'], stell_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+', lab=r"$M_{halo} = 10^{'+str(halo_mass_lim_names2[i_h_mass_lim])+'}$")')
             else: print('plot_par_mass_dep(ax2, colorVal2['+str(i_h_mass_lim)+'], stell_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+')')
         if ngal_lim >= 7:
-            print('plot_par_mass_dep(ax1, colorVal['+str(imass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+", op='none')")
+            print('plot_par_mass_dep(ax1, colorVal['+str(i_s_mass_lim)+'], halo_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+", op='none')")
             print('plot_par_mass_dep(ax2, colorVal2['+str(i_h_mass_lim)+'], stell_mass, std_'+mass_lim_name+', is_std_'+mass_lim_name+', gap_'+mass_lim_name+', is_gap_'+mass_lim_name+', bwt_'+mass_lim_name+', is_bwt_'+mass_lim_name+", op='none')")
 
 
@@ -361,10 +424,37 @@ for imass_lim in range(len(mass_lims)):
         pvalue_b = np.array(pvalue_b)
         kurt = np.array(kurt)
         skewn = np.array(skewn)
-        col=[cluster_names, nmem, M200, sigma200_s, err_sigma_s, sigma200_g, err_sigma_g, sigma200_b, err_sigma_b, residuals_s, residuals_g, residuals_b, log_residuals_s, log_residuals_g, log_residuals_b, pvalue_s[:,0], pvalue_s[:,1], pvalue_s[:,2], pvalue_g[:,0], pvalue_g[:,1], pvalue_g[:,2], pvalue_b[:,0], pvalue_b[:,1], pvalue_b[:,2], kurt[:,0], kurt[:,1], kurt[:,2], skewn[:,0], skewn[:,1], skewn[:,2]]
-        names_col = ['cl_name', 'Ngal', 'M200', 'sigma200_s', 'e_sigma200_s', 'sigma200_g', 'e_sigma200_g', 'sigma200_b', 'e_sigma200_b', 'residuals_s', 'residuals_g', 'residuals_b', 'log_residuals_s', 'log_residuals_g', 'log_residuals_b', 'p_value_s_x', 'p_value_s_y', 'p_value_s_z', 'p_value_g_x', 'p_value_g_y', 'p_value_g_z', 'p_value_b_x', 'p_value_b_y', 'p_value_b_z', 'kurtosis_x', 'kurtosis_y', 'kurtosis_z', 'skeweness_x', 'skeweness_y', 'skeweness_z']
-        data_table = Table(col, names=names_col,dtype=('S', 'i', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f'))
-        data_table.write('/Users/antonioferragamo/Desktop/300_Clusters/Smass_dep/'+tracers+'/fit_std_gap_bwt_'+tracers+'_'+red_dir+'_'+mass_lim_name+'.dat', format='ascii', delimiter=' ',overwrite=True)
+        col=[cluster_names, nmem, nmem_mass, M200, sigma200_s, err_sigma_s, sigma200_g, err_sigma_g, sigma200_b, err_sigma_b, residuals_s, residuals_g, residuals_b, log_residuals_s, log_residuals_g, log_residuals_b, pvalue_s[:,0], pvalue_s[:,1], pvalue_s[:,2], pvalue_g[:,0], pvalue_g[:,1], pvalue_g[:,2], pvalue_b[:,0], pvalue_b[:,1], pvalue_b[:,2], kurt[:,0], kurt[:,1], kurt[:,2], skewn[:,0], skewn[:,1], skewn[:,2]]
+        names_col = ['cl_name', 'Ngal_tot', 'Ngal', 'M200', 'sigma200_s', 'e_sigma200_s', 'sigma200_g', 'e_sigma200_g', 'sigma200_b', 'e_sigma200_b', 'residuals_s', 'residuals_g', 'residuals_b', 'log_residuals_s', 'log_residuals_g', 'log_residuals_b', 'p_value_s_x', 'p_value_s_y', 'p_value_s_z', 'p_value_g_x', 'p_value_g_y', 'p_value_g_z', 'p_value_b_x', 'p_value_b_y', 'p_value_b_z', 'kurtosis_x', 'kurtosis_y', 'kurtosis_z', 'skeweness_x', 'skeweness_y', 'skeweness_z']
+        data_table = Table(col, names=names_col,dtype=('S', 'i', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f','f'))
+        data_table.write('/Users/antonioferragamo/Desktop/300_Clusters/Smass_dep/%s/fit_std_gap_bwt_%s_%s_%s_%s_%sgal.dat'%(tracers,tracers,red_dir,star_mass_strs,mass_lim_name,ngal_lim), format='ascii', delimiter=' ',overwrite=True)
+
+        #RIMUOVERE UN TAB QUANDO SI VUOLE USARE
+        Clusters_infos = Table()
+        Clusters_infos['cl_name'] = cl_names
+        Clusters_infos['M200'] = M200
+        Clusters_infos['R200'] = R200
+        Clusters_infos['df_fcl'] = np.array(df_fcl)
+        Clusters_infos['df_fcl_norm_r200'] = np.array(df_fcl_r200)
+        Clusters_infos['BCG_vel'] = np.array(BCG_vel)
+        Clusters_infos['mean_vel'] = np.array(mean_vel)
+        Clusters_infos['mean_vel_mass'] = np.array(mean_vel_mass)
+        Clusters_infos['nmem'] = np.array(nmem)
+        Clusters_infos['nmem_mass'] = np.array(nmem_mass)
+        Clusters_infos['sigma200_s'] = sigma200_s
+        Clusters_infos['err_sigma200_s'] = err_sigma_s
+        Clusters_infos['sigma200_g'] = sigma200_g
+        Clusters_infos['err_sigma200_g'] = err_sigma_g
+        Clusters_infos['sigma200_b'] = sigma200_b
+        Clusters_infos['err_sigma200_b'] = err_sigma_b
+        Clusters_infos['residuals_s'] = residuals_s
+        Clusters_infos['residuals_g'] = residuals_g
+        Clusters_infos['residuals_b'] = residuals_b
+        Clusters_infos['log_residuals_s'] = log_residuals_s
+        Clusters_infos['log_residuals_g'] = log_residuals_g
+        Clusters_infos['log_residuals_b'] = log_residuals_b
+        Clusters_infos.write(file_path+'output/%s/clusters_info_vel_dist_%s_%s_%sgal%s.fits'%(tracers,stell_mass_str,mass_lim_name2,ngal_lim,non_com_str), overwrite=True)
+
 
 
 """
