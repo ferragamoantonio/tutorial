@@ -179,6 +179,7 @@ def errors_estim(v):
 class Cluster:
     def __init__(self, path, name, tracer='sub'):
         #self.mass200 = mass200
+        #test
         self.name = name
         self.data = np.load(path+name)
         self.header = self.data[0]
