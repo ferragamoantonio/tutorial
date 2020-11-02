@@ -223,7 +223,7 @@ for i_s_mass_lim in range(len(star_mass_strs)):
             Clusters_infos.write(file_path+'output/%s/clusters_info_vel_dist_%s_%s.fits'%(tracers,stell_mass_str,mass_lim_name2), overwrite=True)
             """
 
-            aux_sigma = p1.sigmas200(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),:])
+            aux_sigma = p1.sigmas200(vv = p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),:])
 
             """
             np.random.seed(1986)
@@ -231,7 +231,7 @@ for i_s_mass_lim in range(len(star_mass_strs)):
             vvy = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),1], 10, replace=False)
             vvz = np.random.choice(p1.members_velocities[np.logical_and(p1.dist3d <= p1.R200, p1.M_stars_mem >= star_mass_lim),2], 10, replace=False)
             vv = np.dstack((vvx,vvy,vvz)).reshape(len(vvx),3)
-            aux_sigma = p1.sigmas200(vv)
+            aux_sigma = p1.sigmas200(vv = vv)
             """
 
             sigma200_s1 = np.append(sigma200_s1, aux_sigma[3][0])

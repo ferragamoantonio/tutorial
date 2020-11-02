@@ -180,15 +180,23 @@ class Cluster:
         self.M200_mem = self.data['mass'][self.is_gal]
 
 
+
+        self.members_coord_x = self.data['x'][self.is_gal]*1.e-3 - self.cluster_center[0]
+        self.members_coord_y = self.data['y'][self.is_gal]*1.e-3 - self.cluster_center[1]
+        self.members_coord_z = self.data['z'][self.is_gal]*1.e-3 - self.cluster_center[2]
+
         """
         self.members_coord_x = self.cluster_center[0]-self.data['x'][self.is_gal]*1.e-3
         self.members_coord_y = self.cluster_center[1]-self.data['y'][self.is_gal]*1.e-3
         self.members_coord_z = self.cluster_center[2]-self.data['z'][self.is_gal]*1.e-3
         """
-        self.members_coord_x = self.data['x'][self.is_gal]*1.e-3
-        self.members_coord_y = self.data['y'][self.is_gal]*1.e-3
-        self.members_coord_z = self.data['z'][self.is_gal]*1.e-3
         self.members_coord = np.dstack((self.members_coord_x,self.members_coord_y,self.members_coord_z)).reshape(self.tot_members,3)
+
+        self.abs_members_coord_x = self.data['x'][self.is_gal]*1.e-3
+        self.abs_members_coord_y = self.data['y'][self.is_gal]*1.e-3
+        self.abs_members_coord_z = self.data['z'][self.is_gal]*1.e-3
+
+        self.abs_members_coord = np.dstack((self.abs_members_coord_x,self.abs_members_coord_y,self.abs_members_coord_z)).reshape(self.tot_members,3)
 
 
         #self.members_vx = self.data['vx'][self.is_gal] - self.data['vx'][0]
@@ -277,7 +285,10 @@ class Cluster:
         self.e_sigma_los_cyl_s, self.e_sigma_los_cyl_g, self.e_sigma_los_cyl_b = errors_estim(v)
         return (self.sigma_los_cyl_s, self.e_sigma_los_cyl_s) , (self.sigma_los_cyl_g, self.sigma_los_cyl_g), (self.sigma_los_cyl_b, self.sigma_los_cyl_b)
 
-    def sigmas200(self,vv):
+    def sigmas200(self,vv = None):
+        if vv is None:
+            vv = self.members_velocities200
+
         #v = vv[0]
         v = vv[:,0]
         self.sigma_x_s = np.std(v, ddof=1)
